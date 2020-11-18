@@ -231,4 +231,5 @@ class ImageArchive:
 		Explicitely open archive file (used in multiprocess context)
 		"""
 		if not(self.open_after_fork) or self.data_in_memory : return
-		self.afile = open(self.apath,'rb')
+		if not(self.afile):
+			self.afile = open(self.apath,'rb')
