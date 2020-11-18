@@ -151,7 +151,7 @@ class ImageArchive:
 			root:  Optional[str]= '',
 			transform: Optional[Callable] = None,
 			target_transform: Optional[Callable] = None,
-			loader: Callable[[str], Any] = pil_loader,
+			loader: Callable[[BinaryIO], Any] = pil_loader,
 			extensions: Optional[Tuple[str,...]] = None,
 			data_in_memory: Optional[bool] = False,
 			open_after_fork: Optional[bool]= False
