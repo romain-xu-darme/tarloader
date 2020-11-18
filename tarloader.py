@@ -45,7 +45,7 @@ def get_img_from_tar(
 
 def find_classes(
 	tar_infos: List[tarfile.TarInfo],
-) -> Tuple[List[str],Dict[str,int]]:
+) -> Dict[str,int]:
 	"""
 	Find classes assuming the following directory tree:
 		class0/xxx.png
@@ -60,12 +60,12 @@ def find_classes(
 	Args:
 		tar_infos (list): List of TarInfos corresponding to the target images
 	Returns:
-		Tuple of class names and their corresponding index
+		Dictionnary of class names and their corresponding index
 	"""
 	classes = sorted(list(dict.fromkeys([
 		os.path.dirname(t.name).split('/')[0] for t in tar_infos])))
 	class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
-	return classes, class_to_idx
+	return class_to_idx
 
 def build_index(
 	tar_infos: List[tarfile.TarInfo],
@@ -192,7 +192,7 @@ class ImageArchive:
 			# Get list of TAR infos corresponding to all images of the dataset
 			members = get_img_from_tar(apath,root,extensions)
 			# Find class names and index
-			classes, class_to_idx = find_classes(members)
+			class_to_idx = find_classes(members)
 			# Build index
 			self.idx = build_index(members,class_to_idx,ipath)
 
