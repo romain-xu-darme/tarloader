@@ -177,6 +177,7 @@ class ImageArchive:
 			self.afile = open(apath,'rb')
 		else:
 			# Store only path to file
+			self.afile = None
 			self.apath = apath
 
 		############################
