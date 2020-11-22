@@ -40,9 +40,10 @@ def get_img_from_tar(
 			if m.name.lower().endswith(extensions)]
 	return members
 
-def labels_from_directories(
+def build_index_from_directories(
 	tar_infos: List[tarfile.TarInfo],
-) -> Dict[str,int]:
+	ipath : Optional[str] = '',
+) -> np.array:
 	"""
 	Find classes assuming the following directory tree:
 		class0/xxx.png
@@ -54,34 +55,22 @@ def labels_from_directories(
 	Note: all images images included in subdirectories of a class directory
 	are considered part of the class
 
-	Args:
-		tar_infos (list): List of TarInfos corresponding to the target images
-	Returns:
-		Dictionnary of class names and their corresponding index
-	"""
-	classes = sorted(list(dict.fromkeys([
-		os.path.dirname(t.name).split('/')[0] for t in tar_infos])))
-	class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
-	return class_to_idx
-
-def build_index(
-	tar_infos: List[tarfile.TarInfo],
-	class_to_idx: Dict[str,int],
-	ipath : Optional[str] = '',
-) -> np.array:
-	"""
-	For each image of the dataset, returns
+	Then, for each image of the dataset, returns
 		- its offset in the TAR archive
 		- its size
 		- its class index
 
 	Args:
 		tar_infos (list): List of TarInfos corresponding to the target images
-		class_to_idx (dict): Dictionary associating each class to an index
 		ipath (string, optional): Path to output file for index database
 	Returns:
 		Numpy array
 	"""
+	# Find labels from directories
+	classes = sorted(list(dict.fromkeys([
+		os.path.dirname(t.name).split('/')[0] for t in tar_infos])))
+	class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
+
 	idx = np.empty((len(tar_infos),3),dtype=np.uint64)
 	for i,t in enumerate(tar_infos):
 		cls_name = os.path.dirname(t.name).split('/')[0]
@@ -186,10 +175,8 @@ class ImageArchive:
 
 			# Get list of TAR infos corresponding to all images of the dataset
 			members = get_img_from_tar(apath,root,extensions)
-			# Find class names and index
-			class_to_idx = labels_from_directories(members)
-			# Build index
-			self.idx = build_index(members,class_to_idx,ipath)
+			# Build index from directories
+			self.idx = build_index_from_directories(members,ipath)
 
 		else :
 			self.idx = np.load(ipath,allow_pickle = True)
