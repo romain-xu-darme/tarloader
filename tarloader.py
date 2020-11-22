@@ -94,14 +94,13 @@ def open_item (
 	Returns:
 		Tuple containin file-like object pointing to item and class index
 	"""
-	offset, size, cls_indx = index_table[index]
+	offset, size, label = index_table[index]
 	# Move file pointer to offset
 	afile.seek(offset)
 	# Read item
 	item = BytesIO(afile.read(size))
 	item.seek(0)
-	# Cast class index as int64 because some backends don't like uint64
-	return item, np.int64(cls_indx)
+	return item, label
 
 def pil_loader(buff: BinaryIO) -> Image.Image:
 	img = Image.open(buff)
@@ -197,16 +196,16 @@ class ImageArchive:
 			Tuple (image,class index)
 		"""
 		if self.data_in_memory:
-			offset, size, cls_indx = self.idx[index]
+			offset, size, label = self.idx[index]
 			item = BytesIO(self.data[offset:offset+size])
 		else :
-			item, cls_indx = open_item(self.afile,index,self.idx)
+			item, label = open_item(self.afile,index,self.idx)
 		item = self.loader(item)
 		if self.transform is not None:
 			item = self.transform(item)
 		if self.target_transform is not None:
-			cls_indx = self.target_transform(cls_indx)
-		return item, cls_indx
+			label = self.target_transform(label)
+		return item, label
 
 	def worker_open_archive (self,wid):
 		"""
