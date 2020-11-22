@@ -40,7 +40,7 @@ def get_img_from_tar(
 			if m.name.lower().endswith(extensions)]
 	return members
 
-def find_classes(
+def labels_from_directories(
 	tar_infos: List[tarfile.TarInfo],
 ) -> Dict[str,int]:
 	"""
@@ -187,7 +187,7 @@ class ImageArchive:
 			# Get list of TAR infos corresponding to all images of the dataset
 			members = get_img_from_tar(apath,root,extensions)
 			# Find class names and index
-			class_to_idx = find_classes(members)
+			class_to_idx = labels_from_directories(members)
 			# Build index
 			self.idx = build_index(members,class_to_idx,ipath)
 
