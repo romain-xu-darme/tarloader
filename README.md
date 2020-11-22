@@ -22,18 +22,7 @@ All classes names are sorted alphabetically and associated with an index
 ranging from 0 to N.
 
 ## Handling file extensions
-By default, the object enumerate all files contained in the archive ending with
-the following extensions:
- * .jpg
- * .jpeg
- * .png
- * .ppm
- * .bmp
- * .pgm
- * .tif
- * .tiff
- * .webp
-
+By default, the object enumerate all files contained in the archive.
 It is however possible to filter the images by manually specifying a set of
 authorized file extensions.
 ```

@@ -6,9 +6,6 @@ from pathlib import Path
 from PIL import Image
 from io import BytesIO
 
-IMG_EXTENSIONS = (
-	'.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif', '.tiff', '.webp')
-
 def get_img_from_tar(
 	path: str,
 	root : Optional[str] = '',
@@ -186,9 +183,6 @@ class ImageArchive:
 			ipath = Path(os.path.splitext(apath)[0]+".idx.npy")
 
 		if not(ipath.exists()):
-
-			if extensions is None :
-				extensions = IMG_EXTENSIONS
 
 			# Get list of TAR infos corresponding to all images of the dataset
 			members = get_img_from_tar(apath,root,extensions)
