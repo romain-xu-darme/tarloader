@@ -6,24 +6,83 @@ from pathlib import Path
 from PIL import Image
 from io import BytesIO
 
+class ImgInfo(object):
+	"""
+	Class for storing all informations regarding an image in a TAR archive.
+	Some fields are directly extracted from a TarInfo object while with some additional
+	information is related to database management (image index, ...)
+	"""
+	def __init__(self,
+		tarinfo : Optional[tarfile.TarInfo] = None,
+		index   : Optional[int] = 0
+	):
+		if tarinfo is not None:
+			self.name        = tarinfo.name
+			self.offset_data = tarinfo.offset_data
+			self.size        = tarinfo.size
+		else :
+			self.name        = ""
+			self.offset_data = 0
+			self.size        = 0
+		# Other information
+		self.index = index
+
+def sort_img (
+	tar_infos: List[tarfile.TarInfo],
+	fp: BinaryIO,
+	decode: Optional[bool]=False
+) -> List[ImgInfo]:
+	""" Sort images according to index file, assuming the following content:
+		0 path/to/image/0
+		1 path/to/image/1
+		...
+		N path/to/image/N
+		Note: Indices are not necessarily ordered
+	Args:
+		tar_infos (list): List of TarInfo for all images
+		fp (BinaryIO): File pointer to index file
+		decode (bool, optional): Decode index file content
+	"""
+	lines = fp.read().splitlines()
+	if decode :
+		# Decode index file
+		lines = [l.decode('utf-8') for l in lines]
+
+	img_infos = []
+	for t in tar_infos:
+		idx = -1
+		for l in lines:
+			if t.name == l.split()[1]:
+				idx = int(l.split()[0])
+				break
+		if idx >= 0:
+			img_infos.append(ImgInfo(t,idx))
+		else:
+			raise KeyError('Could not find index for image '+t.name)
+	# Sort
+	img_infos.sort(key=lambda x: x.index, reverse=False)
+	return img_infos
+
 def get_img_from_tar(
 	path: str,
 	root : Optional[str] = '',
+	index_file: Optional[str] = '',
 	extensions: Optional[Tuple[str, ...]] = None,
-) -> List[tarfile.TarInfo]:
+) -> List[ImgInfo]:
 	"""
-	Open TAR file and returns a list of TarInfo corresponding to the target images
+	Open TAR file and returns a list of ImgInfo corresponding to the target images
 	Args:
 		path (string): Path to TAR archive
-		root (string, optional): Root directory path inside archive
+		root (string, optional): Root directory path for images inside archive
+		index_file(string, optional): Path to file associating each image with an index
 		extensions (tuple, optional): Tuple of allowed image extensions
 	Returns:
-		List of TarInfo
+		List of ImgInfo
 	"""
 	# Open TAR file with transparent compression
 	tar = tarfile.open(path,mode='r')
 	members = tar.getmembers()
-	tar.close()
+
 	# Select files in root directory
 	if root:
 		members = [m for m in members
@@ -38,10 +97,30 @@ def get_img_from_tar(
 	if extensions is not None :
 		members = [m for m in members
 			if m.name.lower().endswith(extensions)]
-	return members
+
+	# Use index file to sort images
+	if index_file:
+		# Open index file
+		if index_file.startswith(path):
+			# Index file is inside the TAR archive and given in the form
+			# path/to/archive.tar/path/to/index_file
+			index_fp = tar.extractfile(index_file[len(path)+1:])
+			# Parse index file and sort images
+			img_infos = sort_img(members,index_fp,decode=True)
+		else:
+			# Index is a simple file outside the TAR archive
+			index_fp = open(index_file,'r')
+			# Parse index file and sort images
+			img_infos = sort_img(members,index_fp,decode=False)
+
+	else :
+		img_infos = [ImgInfo(m,i) for i,m in enumerate(members)]
+
+	tar.close()
+	return img_infos
 
 def build_index_from_directories(
-	tar_infos: List[tarfile.TarInfo],
+	img_infos: List[ImgInfo],
 	ipath : Optional[str] = '',
 ) -> np.array:
 	"""
@@ -61,18 +140,18 @@ def build_index_from_directories(
 		- its class index
 
 	Args:
-		tar_infos (list): List of TarInfos corresponding to the target images
+		img_infos (list): List of ImgInfo corresponding to the target images
 		ipath (string, optional): Path to output file for index database
 	Returns:
 		Numpy array
 	"""
 	# Find labels from directories
 	classes = sorted(list(dict.fromkeys([
-		os.path.dirname(t.name).split('/')[0] for t in tar_infos])))
+		os.path.dirname(t.name).split('/')[0] for t in img_infos])))
 	class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
 
-	idx = np.empty((len(tar_infos),3),dtype=np.uint64)
-	for i,t in enumerate(tar_infos):
+	idx = np.empty((len(img_infos),3),dtype=np.uint64)
+	for i,t in enumerate(img_infos):
 		cls_name = os.path.dirname(t.name).split('/')[0]
 		cls_indx = class_to_idx[cls_name]
 		idx[i] = t.offset_data, t.size, cls_indx
@@ -134,6 +213,8 @@ class ImageArchive:
 			apath: str,
 			ipath: Optional[str]= '',
 			root:  Optional[str]= '',
+			image_index: Optional[str]='',
+			image_label: Optional[str]='',
 			transform: Optional[Callable] = None,
 			target_transform: Optional[Callable] = None,
 			loader: Callable[[BinaryIO], Any] = pil_loader,
@@ -141,6 +222,9 @@ class ImageArchive:
 			data_in_memory: Optional[bool] = False,
 			open_after_fork: Optional[bool]= False
 	):
+		# Using option image_label requires to specify image indices
+		assert not(image_label) or image_index
+
 		self.transform        = transform
 		self.target_transform = target_transform
 		self.loader           = loader
@@ -173,7 +257,8 @@ class ImageArchive:
 		if not(ipath.exists()):
 
 			# Get list of TAR infos corresponding to all images of the dataset
-			members = get_img_from_tar(apath,root,extensions)
+			members = get_img_from_tar(apath,root,image_index,extensions)
+
 			# Build index from directories
 			self.idx = build_index_from_directories(members,ipath)
 
