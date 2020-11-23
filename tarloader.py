@@ -119,6 +119,85 @@ def get_img_from_tar(
 	tar.close()
 	return img_infos
 
+def build_index_from_file(
+	apath: str,
+	img_infos: List[ImgInfo],
+	lpath: str,
+	preprocess: Optional[Callable] = None,
+	ipath : Optional[str] = '',
+) -> np.array:
+	"""
+	Find labels from file assuming the following content:
+		image_index_0 list_of_label_information
+		image_index_1 list_of_label_information
+		...
+	WARNING: To speed-up computation, assume that image indices are sorted
+	Note: Images may have multiple labels described on several lines
+	e.g.
+		25 first_label_information
+		25 second_label_information
+		26 first_label_information
+		26 second_label_information
+	Then, for each image of the dataset, returns
+		- its offset in the TAR archive
+		- its size
+		- its list of labels
+
+	Args:
+		path (string): Path to TAR archive
+		img_infos (list): List of ImgInfo corresponding to the target images
+		lpath(str): Path to file containing image labels
+		preprocess (callable,optional): By default, the label is assumed to
+			be a list of floats representing the image class index. However, it is
+			possible to specify a preprocessing function taking the entire label
+			information	string and returning a list of floats
+		ipath (string, optional): Path to output file for index database
+	Returns:
+		Numpy array
+	"""
+	# Open the label file and read content
+	if lpath.startswith(apath):
+		# Label file is inside the TAR archive and given in the form
+		# path/to/archive.tar/path/to/label_file
+		tar = tarfile.open(apath,mode='r')
+		label_fp = tar.extractfile(lpath[len(apath)+1:])
+		lines = label_fp.read().splitlines()
+		# Decode binary strings
+		lines = [l.decode('utf-8') for l in lines]
+	else:
+		# Index is a simple file outside the TAR archive
+		label_fp = open(lpath,'r')
+		lines = label_fp.read().splitlines()
+
+	# Init table
+	data = []
+	for r,img_info in enumerate(img_infos):
+		np_data = [img_info.index,img_info.offset_data,img_info.size]
+		data.append(np_data)
+
+	# Current index in image table
+	tab_idx = 0
+	# Read all labels
+	for l in lines:
+		img_idx = int(l.split()[0])
+		# Move on to the next image
+		if img_idx > data[tab_idx][0]:	tab_idx += 1
+		# Skip images not belonging to target set
+		if img_idx < data[tab_idx][0]: continue
+		if img_idx != data[tab_idx][0] :
+			raise ValueError('Missing labels for image',str(data[tab_idx][0]))
+		if preprocess is not None:
+			data[tab_idx] += preprocess(l)
+		else :
+			data[tab_idx] += [np.float64(m) for m in l.split()[1:]]
+
+	# Convert to numpy array
+	data=np.array(data)
+
+	if ipath:
+		np.save(ipath,data,allow_pickle=True)
+	return data
+
 def build_index_from_directories(
 	img_infos: List[ImgInfo],
 	ipath : Optional[str] = '',
@@ -150,15 +229,15 @@ def build_index_from_directories(
 		os.path.dirname(t.name).split('/')[0] for t in img_infos])))
 	class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
 
-	idx = np.empty((len(img_infos),3),dtype=np.uint64)
+	data = []
 	for i,t in enumerate(img_infos):
 		cls_name = os.path.dirname(t.name).split('/')[0]
 		cls_indx = class_to_idx[cls_name]
-		idx[i] = t.offset_data, t.size, cls_indx
-
+		data.append([t.index, t.offset_data, t.size, cls_indx])
+	data = np.array(data)
 	if ipath:
-		np.save(ipath,idx,allow_pickle=True)
-	return idx
+		np.save(ipath,data,allow_pickle=True)
+	return data
 
 def open_item (
 	afile: BinaryIO,
@@ -173,13 +252,16 @@ def open_item (
 	Returns:
 		Tuple containin file-like object pointing to item and class index
 	"""
-	offset, size, label = index_table[index]
+	data = index_table[index]
+	offset = np.uint64(data[1])
+	size   = np.uint64(data[2])
+	labels = data[3:]
 	# Move file pointer to offset
 	afile.seek(offset)
 	# Read item
 	item = BytesIO(afile.read(size))
 	item.seek(0)
-	return item, label
+	return item, labels
 
 def pil_loader(buff: BinaryIO) -> Image.Image:
 	img = Image.open(buff)
@@ -195,6 +277,10 @@ class ImageArchive:
 		apath (string): Path to TAR archive
 		ipath (string, optional): Path to index file
 		root (string, optional): Root path inside TAR archive
+		image_index (string, optional): Path to file containing images indices
+		image_label (string, optional): Path to file containing images labels
+		image_label_preprocessing (callable, optional): A function that takes a
+			string label and returns a float value
 		transform (callable, optional): A function/transform that takes in an PIL
 			image and returns a transformed version. E.g, ``transforms.RandomCrop``
 		target_transform (callable, optional): A function/transform that takes in
@@ -215,6 +301,7 @@ class ImageArchive:
 			root:  Optional[str]= '',
 			image_index: Optional[str]='',
 			image_label: Optional[str]='',
+			image_label_preprocessing: Optional[Callable] = None,
 			transform: Optional[Callable] = None,
 			target_transform: Optional[Callable] = None,
 			loader: Callable[[BinaryIO], Any] = pil_loader,
@@ -259,8 +346,16 @@ class ImageArchive:
 			# Get list of TAR infos corresponding to all images of the dataset
 			members = get_img_from_tar(apath,root,image_index,extensions)
 
-			# Build index from directories
-			self.idx = build_index_from_directories(members,ipath)
+			if image_label :
+				self.idx = build_index_from_file(
+					apath=apath,
+					img_infos=members,
+					lpath=image_label,
+					preprocess=image_label_preprocessing,
+					ipath=ipath)
+			else:
+				# Build index from directories
+				self.idx = build_index_from_directories(members,ipath)
 
 		else :
 			self.idx = np.load(ipath,allow_pickle = True)
