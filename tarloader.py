@@ -286,10 +286,10 @@ class ImageArchive:
 		else :
 			item, label = open_item(self.afile,index,self.idx)
 		item = self.loader(item)
+		if self.target_transform is not None:
+			label = self.target_transform(item,label)
 		if self.transform is not None:
 			item = self.transform(item)
-		if self.target_transform is not None:
-			label = self.target_transform(label)
 		return item, label
 
 	def worker_open_archive (self,wid):

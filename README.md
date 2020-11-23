@@ -54,9 +54,10 @@ dataset = ImageArchive(
 
 ## Index table
 The ImageArchive object uses an **index table** storing for each image:
+ * its index
  * its offset inside the TAR file
  * its size
- * its class index
+ * its list of labels stored as a list of floats
 
 By default, the object looks for the file _/path/to/my/archive.idx.npy_ and
 creates it if necessary. It is however possible to specify the path to this
@@ -92,9 +93,24 @@ the images and to the class index.
 ```
 import torchvision.transforms as transforms
 import torch
+from PIL import Image
+import numpy as np
 
-def index_to_one_hot(index):
-  return torch.eye(200)[index]
+def rescale_bbox(
+  img:Image.Image,
+  labels:List
+):
+  """
+  Rescale bounding box to range [0,1] with respect to image
+  original dimensions
+  """
+  src_width  = img.size[0]
+  src_height = img.size[1]
+  return np.array([
+    labels[0]/src_width,
+    labels[1]/src_height,
+    labels[2]/src_width,
+    labels[3]/src_height])
 
 transform = transforms.Compose([
  transforms.RandomResizedCrop(224),
@@ -107,9 +123,10 @@ dataset = ImageArchive(
   target_transform=index_to_one_hot
 )
 ```
-**Note:** It is not possible for now to specify a *target\_transform* function
-taking more arguments than the class index. In the example above, the total
-number of classes should be known prior to defining the function.
+**Note:** The *target\_transform* function should always take an image and
+a list of labels as inputs and it will be applied using the input image
+**before** *transform* is applied. This allows, for example, to rescale a
+bounding box before the image is resized.
 
 ## Loading dataset in memory
 For small datasets, it is possible to load the entire TAR archive into memory,
