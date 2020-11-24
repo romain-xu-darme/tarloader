@@ -376,7 +376,10 @@ class ImageArchive:
 			Tuple (image,class index)
 		"""
 		if self.data_in_memory:
-			offset, size, label = self.idx[index]
+			data = self.idx[index]
+			offset = np.uint64(data[1])
+			size   = np.uint64(data[2])
+			label  = data[3:]
 			item = BytesIO(self.data[offset:offset+size])
 		else :
 			item, label = open_item(self.afile,index,self.idx)
