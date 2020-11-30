@@ -6,6 +6,8 @@ from pathlib import Path
 from PIL import Image
 from io import BytesIO
 
+####################################################################################
+# BEGIN: Extracted from torchvision.datasets.ImageFolder
 def has_file_allowed_extension(filename: str, extensions: Tuple[str, ...]) -> bool:
 	"""Checks if a file is an allowed extension.
 
@@ -28,6 +30,8 @@ def is_image_file(filename: str) -> bool:
 		bool: True if the filename ends with a known image extension
 	"""
 	return has_file_allowed_extension(filename, IMG_EXTENSIONS)
+# END: Extracted from torchvision.datasets.ImageFolder
+####################################################################################
 
 class ImgInfo(object):
 	"""
@@ -107,6 +111,8 @@ def get_img_from_tar(
 	Returns:
 		List of ImgInfo
 	"""
+####################################################################################
+# BEGIN: Extracted from torchvision.datasets.ImageFolder
 	both_none = extensions is None and is_valid_file is None
 	both_something = extensions is not None and is_valid_file is not None
 	if both_none or both_something:
@@ -116,6 +122,8 @@ def get_img_from_tar(
 		def is_valid_file(x: str) -> bool:
 			return has_file_allowed_extension(x, cast(Tuple[str, ...], extensions))
 	is_valid_file = cast(Callable[[str], bool], is_valid_file)
+# END: Extracted from torchvision.datasets.ImageFolder
+####################################################################################
 
 	# Open TAR file with transparent compression
 	tar = tarfile.open(path,mode='r')
@@ -263,7 +271,11 @@ def build_index_from_directories(
 	# Find labels from directories
 	classes = sorted(list(dict.fromkeys([
 		os.path.dirname(t.name).split('/')[0] for t in img_infos])))
+####################################################################################
+# BEGIN: Extracted from torchvision.datasets.ImageFolder
 	class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
+# END: Extracted from torchvision.datasets.ImageFolder
+####################################################################################
 
 	data = []
 	for i,t in enumerate(img_infos):
@@ -299,11 +311,15 @@ def open_item (
 	item.seek(0)
 	return item, labels
 
+####################################################################################
+# BEGIN: Extracted from torchvision.datasets.ImageFolder
 IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif', '.tiff', '.webp')
 
 def pil_loader(buff: BinaryIO) -> Image.Image:
 	img = Image.open(buff)
 	return img.convert('RGB')
+# END: Extracted from torchvision.datasets.ImageFolder
+####################################################################################
 
 class ImageArchive:
 	""" A data loader where the images are contained inside a TAR archive.
