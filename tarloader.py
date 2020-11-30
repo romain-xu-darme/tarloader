@@ -385,6 +385,7 @@ class ImageArchive:
 		ipath = Path(ipath)
 
 		if not(ipath.exists()) or overwrite_index:
+			print('[',self.__class__.__name__,'] Building index file ',ipath,sep='')
 			extensions = IMG_EXTENSIONS if is_valid_file is None else None
 
 			# Get list of TAR infos corresponding to all images of the dataset
@@ -402,6 +403,7 @@ class ImageArchive:
 				self.idx = build_index_from_directories(members,ipath)
 
 		else :
+			print('[',self.__class__.__name__,'] Loading index file ',ipath,sep='')
 			self.idx = np.load(ipath,allow_pickle = True)
 		self.nobjs = self.idx.shape[0]
 
