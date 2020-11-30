@@ -174,6 +174,34 @@ dataset = ImageArchive(
 )
 ```
 
+## Splitting datasets
+In order to split the dataset between several subsets, it is possible to specify a
+splitting mask associating each index of the image with a value which is compared
+to a reference value, as shown below.
+```
+with open('train_test_split.txt') as fin:
+  # Each line of the file is in the form <image_index> <split_value (0/1)>
+  split_mask = np.array([int(l.split()[1])  for l in fin])
+
+split_val  = 1
+train_dataset = tarloader.ImageArchive(
+  apath=apath,
+  root=root,
+  split_mask = split_mask,
+  split_val  = 1,
+  image_index='images.txt',
+  image_label='image_class_labels.txt'
+)
+test_dataset = tarloader.ImageArchive(
+  apath=apath,
+  root=root,
+  split_mask = split_mask,
+  split_val  = 0,
+  image_index='images.txt',
+  image_label='image_class_labels.txt'
+)
+```
+
 ## Image loader and transformations
 ### Loading images
 By default, each image is loaded using the _open_ function of the PIL.Image

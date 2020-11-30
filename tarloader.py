@@ -319,6 +319,9 @@ class ImageArchive:
 		image_label (string, optional): Path to file containing images labels
 		image_label_preprocessing (callable, optional): A function that takes a
 			string label and returns a float value
+		split_mask (np array, optional): Splitting mask associating a value to
+			each image
+		split_val (int, optional): Splitting value.
 		transform (callable, optional): A function/transform that takes in an PIL
 			image and returns a transformed version. E.g, ``transforms.RandomCrop``
 		target_transform (callable, optional): A function/transform that takes in
@@ -341,6 +344,8 @@ class ImageArchive:
 			image_index: Optional[str]='',
 			image_label: Optional[str]='',
 			image_label_preprocessing: Optional[Callable] = None,
+			split_mask: Optional[np.array] = None,
+			split_val: Optional[int] = 0,
 			transform: Optional[Callable] = None,
 			target_transform: Optional[Callable] = None,
 			loader: Callable[[BinaryIO], Any] = pil_loader,
@@ -405,6 +410,11 @@ class ImageArchive:
 		else :
 			print('[',self.__class__.__name__,'] Loading index file ',ipath,sep='')
 			self.idx = np.load(ipath,allow_pickle = True)
+
+		# Split dataset
+		if split_mask is not None:
+			self.idx = self.idx[split_mask==split_val]
+
 		self.nobjs = self.idx.shape[0]
 
 	def __len__(self) -> int:
