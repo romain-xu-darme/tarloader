@@ -339,7 +339,8 @@ class ImageArchive:
 		############################
 
 		if not(ipath):
-			ipath = Path(os.path.splitext(apath)[0]+".idx.npy")
+			ipath = os.path.splitext(apath)[0]+".idx.npy"
+		ipath = Path(ipath)
 
 		if not(ipath.exists()):
 
