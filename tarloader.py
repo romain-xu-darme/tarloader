@@ -350,7 +350,9 @@ class ImageArchive:
 			overwrite_index: Optional[bool]= False,
 	):
 		# Using option image_label requires to specify image indices
-		assert not(image_label) or image_index
+		if image_label and not(image_index):
+			raise ValueError(
+				'Specifying image_label file requires to also specify image_index file')
 
 		self.transform        = transform
 		self.target_transform = target_transform
