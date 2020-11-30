@@ -1,10 +1,33 @@
 import os
 import tarfile
 import numpy as np
-from typing import Any, Callable, Dict, List, Optional, Tuple, BinaryIO
+from typing import Any, Callable, cast, Dict, List, Optional, Tuple, BinaryIO
 from pathlib import Path
 from PIL import Image
 from io import BytesIO
+
+def has_file_allowed_extension(filename: str, extensions: Tuple[str, ...]) -> bool:
+	"""Checks if a file is an allowed extension.
+
+	Args:
+		filename (string): path to a file
+		extensions (tuple of strings): extensions to consider (lowercase)
+
+	Returns:
+		bool: True if the filename ends with one of given extensions
+	"""
+	return filename.lower().endswith(extensions)
+
+def is_image_file(filename: str) -> bool:
+	"""Checks if a file is an allowed image extension.
+
+	Args:
+		filename (string): path to a file
+
+	Returns:
+		bool: True if the filename ends with a known image extension
+	"""
+	return has_file_allowed_extension(filename, IMG_EXTENSIONS)
 
 class ImgInfo(object):
 	"""
@@ -68,6 +91,7 @@ def get_img_from_tar(
 	root : Optional[str] = '',
 	index_file: Optional[str] = '',
 	extensions: Optional[Tuple[str, ...]] = None,
+	is_valid_file: Optional[Callable[[str], bool]] = None,
 ) -> List[ImgInfo]:
 	"""
 	Open TAR file and returns a list of ImgInfo corresponding to the target images
@@ -75,10 +99,24 @@ def get_img_from_tar(
 		path (string): Path to TAR archive
 		root (string, optional): Root directory path for images inside archive
 		index_file(string, optional): Path to file associating each image with an index
-		extensions (tuple, optional): Tuple of allowed image extensions
+		extensions (tuple[string]): A list of allowed extensions.
+			both extensions and is_valid_file should not be passed.
+		is_valid_file (callable, optional): A function that takes path of a file
+			and check if the file is a valid file (used to check of corrupt files)
+			both extensions and is_valid_file should not be passed.
 	Returns:
 		List of ImgInfo
 	"""
+	both_none = extensions is None and is_valid_file is None
+	both_something = extensions is not None and is_valid_file is not None
+	if both_none or both_something:
+		raise ValueError(
+			"Both extensions and is_valid_file cannot be None or not None at the same time")
+	if extensions is not None:
+		def is_valid_file(x: str) -> bool:
+			return has_file_allowed_extension(x, cast(Tuple[str, ...], extensions))
+	is_valid_file = cast(Callable[[str], bool], is_valid_file)
+
 	# Open TAR file with transparent compression
 	tar = tarfile.open(path,mode='r')
 	members = tar.getmembers()
@@ -94,9 +132,7 @@ def get_img_from_tar(
 			m.name = m.name[len(root):]
 
 	# Check file extensions
-	if extensions is not None :
-		members = [m for m in members
-			if m.name.lower().endswith(extensions)]
+	members = [m for m in members if is_valid_file(m.name)]
 
 	# Use index file to sort images
 	if index_file:
@@ -150,7 +186,7 @@ def build_index_from_file(
 		preprocess (callable,optional): By default, the label is assumed to
 			be a list of floats representing the image class index. However, it is
 			possible to specify a preprocessing function taking the entire label
-			information	string and returning a list of floats
+			information string and returning a list of floats
 		ipath (string, optional): Path to output file for index database
 	Returns:
 		Numpy array
@@ -263,6 +299,8 @@ def open_item (
 	item.seek(0)
 	return item, labels
 
+IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif', '.tiff', '.webp')
+
 def pil_loader(buff: BinaryIO) -> Image.Image:
 	img = Image.open(buff)
 	return img.convert('RGB')
@@ -286,12 +324,13 @@ class ImageArchive:
 		target_transform (callable, optional): A function/transform that takes in
 			the target and transforms it.
 		loader (callable, optional): A function to load an image given its path.
-		extensions (tuple of strings, optional): List of authorized file extensions
-			inside the TAR archive
+		is_valid_file (callable, optional): A function that takes path of an Image file
+			and check if the file is a valid file (used to check of corrupt files)
 		data_in_memory (boolean, optional): Load content of TAR archive in memory
 		open_after_fork (boolean, optional): When used in a multiprocess context,
 			this option indicates that the TAR file should not be opened yet but
 			rather after processes are spawned (using worker_open_archive method)
+		overwrite_index (boolean, optional): Overwrite index file if present
 	"""
 
 	def __init__(
@@ -305,9 +344,10 @@ class ImageArchive:
 			transform: Optional[Callable] = None,
 			target_transform: Optional[Callable] = None,
 			loader: Callable[[BinaryIO], Any] = pil_loader,
-			extensions: Optional[Tuple[str,...]] = None,
+			is_valid_file: Optional[Callable[[str], bool]] = None,
 			data_in_memory: Optional[bool] = False,
-			open_after_fork: Optional[bool]= False
+			open_after_fork: Optional[bool]= False,
+			overwrite_index: Optional[bool]= False,
 	):
 		# Using option image_label requires to specify image indices
 		assert not(image_label) or image_index
@@ -342,10 +382,11 @@ class ImageArchive:
 			ipath = os.path.splitext(apath)[0]+".idx.npy"
 		ipath = Path(ipath)
 
-		if not(ipath.exists()):
+		if not(ipath.exists()) or overwrite_index:
+			extensions = IMG_EXTENSIONS if is_valid_file is None else None
 
 			# Get list of TAR infos corresponding to all images of the dataset
-			members = get_img_from_tar(apath,root,image_index,extensions)
+			members = get_img_from_tar(apath,root,image_index,extensions,is_valid_file)
 
 			if image_label :
 				self.idx = build_index_from_file(
