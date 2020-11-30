@@ -4,6 +4,9 @@ Class for loading Deep Learning databases contained in TAR archives.
 This class aims at reducing the cost of opening/closing image files during
 training by keeping a single file pointer to the TAR archive, or better, to
 load the entire dataset in memory.
+
+It is compatible with the torchvision.datasets.ImageFolder class.
+
 ## Path to the TAR archive
 The main argument for creating an ImageArchive object is the path to the target
 TAR archive.
@@ -21,14 +24,28 @@ class_name_N/zzz.png
 All classes names are sorted alphabetically and associated with an index
 ranging from 0 to N.
 
-## Handling file extensions
-By default, the object enumerate all files contained in the archive.
-It is however possible to filter the images by manually specifying a set of
-authorized file extensions.
+## Filtering valid file paths
+By default, the object enumerate all files contained in the archive ending with
+one of the following extension:
+ * .jpg
+ * .jpeg
+ * .png
+ * .ppm
+ * .bmp
+ * .pgm
+ * .tif
+ * .tiff
+ * .webp
+
+It is however possible to filter the images by manually specifying a function
+analyzing a file path to determine its validity.
 ```
+def is_valid_file (path: str) -> bool:
+  return path.lower().endswith('.jpg')
+
 dataset = ImageArchive(
   apath='path/to/my/archive.tar',
-  extensions=('.jpg','.jpeg')
+  is_valid_file = is_valid_file
 )
 ```
 ## Handling the folder tree
@@ -116,7 +133,7 @@ def preprocess_attributes (raw_data):
   # <image_id> <attribute_id> <is_present> <certainty_id> <time>
   # only return -1 or 1 depending on presence
   is_present = raw_data.split()[2]
-  res = -1 if is_present == 0 else 1
+  res = -1 if is_present == "0" else 1
   return [res]
 
 dataset = ImageArchive(
@@ -146,7 +163,15 @@ dataset = ImageArchive(
   apath='path/to/my/archive.tar',
   ipath='path/to/my/index'
 )
-
+```
+It is also possible to force the creation of the index file, effectively
+overwriting any pre-existing file.
+```
+dataset = ImageArchive(
+  apath='path/to/my/archive.tar',
+  ipath='path/to/my/index',
+  overwrite_index = True
+)
 ```
 
 ## Image loader and transformations
@@ -175,6 +200,14 @@ import torch
 from PIL import Image
 import numpy as np
 
+def parse_bbox (line: str):
+  line = line.split()
+  bbx = float(line[1])
+  bby = float(line[2])
+  bbw = float(line[3])
+  bbh = float(line[4])
+  return (bbx,bby,bbw,bbh)
+
 def rescale_bbox(
   img:Image.Image,
   labels:List
@@ -198,14 +231,21 @@ transform = transforms.Compose([
 
 dataset = ImageArchive(
   apath='path/to/my/archive.tar',
+  image_index='CUB200/images.txt',
+  image_label='CUB200/bounding_boxes.txt',
   transform=transform,
-  target_transform=index_to_one_hot
+  image_label_preprocessing = parse_bbox,
+  target_transform=rescale_bbox
 )
 ```
 **Note:** The *target\_transform* function should always take an image and
 a list of labels as inputs and it will be applied using the input image
 **before** *transform* is applied. This allows, for example, to rescale a
 bounding box before the image is resized.
+
+**Note:** Contrary to the *image\_label\_preprocessing* option, which is used
+to parse the label file when building the index, the *target\_transform*
+function is applied on-the-fly during training.
 
 ## Loading dataset in memory
 For small datasets, it is possible to load the entire TAR archive into memory,
