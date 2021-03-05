@@ -382,7 +382,7 @@ class ImageArchive:
 		############################
 
 		if data_in_memory and open_after_fork :
-			print('Ignoring open_after_fork option since archive is loaded in memory')
+			print(f'[{self.__class__.__name__}] Ignoring open_after_fork option (archive loaded in memory)')
 			open_after_fork = False
 
 		self.data_in_memory  = data_in_memory
@@ -406,7 +406,7 @@ class ImageArchive:
 		ipath = Path(ipath)
 
 		if not(ipath.exists()) or overwrite_index:
-			print('[',self.__class__.__name__,'] Building index file ',ipath,sep='')
+			print(f'[{self.__class__.__name__}] Building index file {ipath}')
 			extensions = IMG_EXTENSIONS if is_valid_file is None else None
 
 			# Get list of TAR infos corresponding to all images of the dataset
@@ -424,7 +424,7 @@ class ImageArchive:
 				self.idx = build_index_from_directories(members,ipath)
 
 		else :
-			print('[',self.__class__.__name__,'] Loading index file ',ipath,sep='')
+			print(f'[{self.__class__.__name__}] Loading index file {ipath}')
 			self.idx = np.load(ipath,allow_pickle = True)
 
 		# Split dataset
