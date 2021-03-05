@@ -275,6 +275,45 @@ bounding box before the image is resized.
 to parse the label file when building the index, the *target\_transform*
 function is applied on-the-fly during training.
 
+### Applying index based transformation on images
+It is possible to apply an index based transformation on images (prior to the
+application of transformations specified in **transform**).
+
+```
+def read_bbox_parameters (line: str):
+	line = line.split()
+	bbx = float(line[1])
+	bby = float(line[2])
+	bbw = float(line[3])
+	bbh = float(line[4])
+	return (bbx,bby,bbw,bbh)
+
+def apply_bbox_wrapper(filename:str):
+	with open(filename,'r') as fin:
+		lines = fin.read().splitlines()
+		bboxes = [read_bbox_parameters(line) for line in lines]
+
+	def apply_bbox(img:Image.Image, index: int):
+		bbox = bboxes[index-1]
+		bbx = bbox[0]
+		bby = bbox[1]
+		bbw = bbox[2]
+		bbh = bbox[3]
+		img = img.crop((bbx,bby,bbx+bbw,bby+bbh))
+		return img
+	return apply_bbox
+
+index_transform = apply_bbox_wrapper('CUB200/bounding_boxes.txt')
+
+dataset_train = ImageArchive(
+  apath='path/to/my/archive.tar',
+  image_index='CUB200/images.txt',
+  index_transform=index_transform
+)
+```
+Note: This option is fully compatible with the **split_mask** option because the index passed on
+to the index_transform function is the absolute index of the image stored in the Index Table.
+
 ## Loading dataset in memory
 For small datasets, it is possible to load the entire TAR archive into memory,
 saving a lot of time during training.

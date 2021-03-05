@@ -301,6 +301,7 @@ def open_item (
 		Tuple containin file-like object pointing to item and class index
 	"""
 	data = index_table[index]
+	abs_idx= int(data[0])
 	offset = np.uint64(data[1])
 	size   = np.uint64(data[2])
 	labels = data[3:]
@@ -309,7 +310,7 @@ def open_item (
 	# Read item
 	item = BytesIO(afile.read(size))
 	item.seek(0)
-	return item, labels
+	return item, abs_idx, labels
 
 ####################################################################################
 # BEGIN: Extracted from torchvision.datasets.ImageFolder
@@ -340,6 +341,9 @@ class ImageArchive:
 		split_val (int, optional): Splitting value.
 		transform (callable, optional): A function/transform that takes in an PIL
 			image and returns a transformed version. E.g, ``transforms.RandomCrop``
+		index_transform (callable, optional): A function/transform that takes in an PIL
+			image and the image index and returns a transformed version (used to apply index
+			based transforms)
 		target_transform (callable, optional): A function/transform that takes in
 			the target and transforms it.
 		loader (callable, optional): A function to load an image given its path.
@@ -363,6 +367,7 @@ class ImageArchive:
 			split_mask: Optional[np.array] = None,
 			split_val: Optional[int] = 0,
 			transform: Optional[Callable] = None,
+			index_transform: Optional[Callable] = None,
 			target_transform: Optional[Callable] = None,
 			loader: Callable[[BinaryIO], Any] = pil_loader,
 			is_valid_file: Optional[Callable[[str], bool]] = None,
@@ -376,6 +381,7 @@ class ImageArchive:
 				'Specifying image_label file requires to also specify image_index file')
 
 		self.transform        = transform
+		self.index_transform  = index_transform
 		self.target_transform = target_transform
 		self.loader           = loader
 
@@ -449,15 +455,22 @@ class ImageArchive:
 		"""
 		if self.data_in_memory:
 			data = self.idx[index]
+			abs_idx= int(data[0])
 			offset = np.uint64(data[1])
 			size   = np.uint64(data[2])
 			label  = data[3:]
 			item = BytesIO(self.data[offset:offset+size])
 		else :
-			item, label = open_item(self.afile,index,self.idx)
+			if self.afile is None:
+				raise LookupError(f'[{self.__class__.__name__}] Archive file not opened yet.'\
+					'This may happen when you use open_after_fork option but forgot to call '\
+					'worker_open_archive in each worker in a multiprocess context.')
+			item, abs_idx, label = open_item(self.afile,index,self.idx)
 		item = self.loader(item)
 		if self.target_transform is not None:
 			label = self.target_transform(item,label)
+		if self.index_transform is not None:
+			item = self.index_transform(item,abs_idx)
 		if self.transform is not None:
 			item = self.transform(item)
 		return item, label
