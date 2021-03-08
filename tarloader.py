@@ -492,9 +492,8 @@ class ImageArchive:
 		Returns:
 			Tuple (image,label) or Tuple(array(images),array(labels)) depending on batch size
 		"""
-		index = index % self.__len__()
-		if index >= self.__len__():
-			raise IndexError(f'[{self.__class__.__name__}] Batch index out of range')
+		if index < 0: index = index % self.__len__()
+		if index >= self.__len__(): raise StopIteration
 		if self.batch_size == 1:
 			return self.__getsingleitem(index)
 		else:
