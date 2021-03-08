@@ -292,13 +292,13 @@ def open_item (
 	index: int,
 	index_table: np.array) -> Tuple[BinaryIO,int]:
 	"""
-	Given an opened TAR archive, return item and class index
+	Given an opened TAR archive, return item and label
 	Args:
 		afile (BinaryIO): Opened TAR archive
 		index (int): Index of item
 		index_table (np.array): Table of item information
 	Returns:
-		Tuple containin file-like object pointing to item and class index
+		Tuple containin file-like object pointing to item and label
 	"""
 	data = index_table[index]
 	abs_idx= int(data[0])
@@ -346,6 +346,9 @@ class ImageArchive:
 			based transforms)
 		target_transform (callable, optional): A function/transform that takes in
 			the target and transforms it.
+		batch_size (int, optional): Size of each batch of data. If set to 1 (default), the
+			generator returns individual items of the dataset
+		drop_last (bool, optional): Drop last non complete batch (if any)
 		loader (callable, optional): A function to load an image given its path.
 		is_valid_file (callable, optional): A function that takes path of an Image file
 			and check if the file is a valid file (used to check of corrupt files)
@@ -369,6 +372,8 @@ class ImageArchive:
 			transform: Optional[Callable] = None,
 			index_transform: Optional[Callable] = None,
 			target_transform: Optional[Callable] = None,
+			batch_size: Optional[int] = 1,
+			drop_last: Optional[bool] = False,
 			loader: Callable[[BinaryIO], Any] = pil_loader,
 			is_valid_file: Optional[Callable[[str], bool]] = None,
 			data_in_memory: Optional[bool] = False,
@@ -383,6 +388,8 @@ class ImageArchive:
 		self.transform        = transform
 		self.index_transform  = index_transform
 		self.target_transform = target_transform
+		self.batch_size       = batch_size
+		self.drop_last        = drop_last
 		self.loader           = loader
 
 		############################
@@ -442,16 +449,19 @@ class ImageArchive:
 	def __len__(self) -> int:
 		"""
 		Returns:
-			Number of images in the database
+			Number of images/batches in the database
 		"""
-		return self.nobjs
+		nbatches = int(self.nobjs/self.batch_size)
+		if (nbatches % self.nobjs > 0) and not(self.drop_last):
+			nbatches += 1
+		return nbatches
 
-	def __getitem__ (self, index:int) -> Tuple[Any,Any]:
+	def __getsingleitem (self, index:int) -> Tuple[Any,Any]:
 		"""
 		Args:
 			index (int): Index of the image in the database
 		Returns:
-			Tuple (image,class index)
+			Tuple (image,label)
 		"""
 		if self.data_in_memory:
 			data = self.idx[index]
@@ -474,6 +484,28 @@ class ImageArchive:
 		if self.transform is not None:
 			item = self.transform(item)
 		return item, label
+
+	def __getitem__ (self, index:int) -> Tuple[Any,Any]:
+		"""
+		Args:
+			index (int): Index of the image/batch in the database
+		Returns:
+			Tuple (image,label) or Tuple(array(images),array(labels)) depending on batch size
+		"""
+		if index >= self.__len__():
+			raise IndexError(f'[{self.__class__.__name__}] Batch index out of range')
+		if self.batch_size == 1:
+			return self.__getsingleitem(index)
+		else:
+			batch_start = index*self.batch_size
+			batch_end   = min((index+1)*self.batch_size,self.nobjs)
+			X = []
+			Y = []
+			for idx in range(batch_start,batch_end):
+				x,y = self.__getsingleitem(idx)
+				X.append(x)
+				Y.append(y)
+			return np.array(X),np.array(Y)
 
 	def worker_open_archive (self,wid):
 		"""
@@ -508,6 +540,13 @@ def ImageArchive_add_parser_options(parser):
 	parser.add_argument('--tarloader-label-file', required=False,
 		metavar=('<path_to_file>'),
 		help='Path to label file.')
+	parser.add_argument('--tarloader-batch-size', type=int, required=False,
+		metavar=('<size>'),
+		default=1,
+		help='Batch size')
+	parser.add_argument('--tarloader-drop-last-batch', required=False,
+		action='store_true',
+		help='Drop last non complete batch (if any)')
 	parser.add_argument('--tarloader-keep-in-memory', required=False,
 		action='store_true',
 		help='Keep all dataset in memory')

@@ -338,6 +338,38 @@ dataset_train = ImageArchive(
 Note: This option is fully compatible with the **split_mask** option because the index passed on
 to the index_transform function is the absolute index of the image stored in the Index Table.
 
+## Setting batch size
+To speed up processing, it is possible to indicate the size of each batch of data returned by
+the generator (the default size is 1) using **batch_size**.
+
+In order to keep only complete batches, the **drop_last** option can be set (default: False).
+
+```
+dataset_train = ImageArchive(
+  apath='path/to/my/archive.tar',
+  image_index='CUB200/images.txt',
+	batch_size=32
+)
+print(f'Dataset length: {len(dataset)}')
+print(f'Last batch shape: {dataset[-1][0].shape}')
+...
+Dataset length: 182
+Last batch shape: (2,224,224,3)
+```
+```
+dataset_train = ImageArchive(
+  apath='path/to/my/archive.tar',
+  image_index='CUB200/images.txt',
+	batch_size=32,
+	drop_last=True
+)
+print(f'Dataset length: {len(dataset)}')
+print(f'Last batch shape: {dataset[-1][0].shape}')
+...
+Dataset length: 181
+Last batch shape: (32,224,224,3)
+```
+
 ## Loading dataset in memory
 For small datasets, it is possible to load the entire TAR archive into memory,
 saving a lot of time during training.
