@@ -275,6 +275,30 @@ bounding box before the image is resized.
 to parse the label file when building the index, the *target\_transform*
 function is applied on-the-fly during training.
 
+Using Keras, it is possible to exploit the ImageDataGenerator class as follows:
+```
+from keras_preprocessing.image import ImageDataGenerator, array_to_img,img_to_array
+
+datagen = ImageDataGenerator(
+    featurewise_center=True,
+    featurewise_std_normalization=True,
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    horizontal_flip=True)
+
+def transform(idg : ImageDataGenerator):
+  def __transform(img: Image.Image):
+    np_img = img_to_array(img)
+    return array_to_img(idg.random_transform(np_img))
+  return __transform
+
+dataset = ImageArchive(
+  apath='path/to/my/archive.tar',
+  transform=transform
+)
+```
+
 ### Applying index based transformation on images
 It is possible to apply an index based transformation on images (prior to the
 application of transformations specified in **transform**).
