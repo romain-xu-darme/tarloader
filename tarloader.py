@@ -452,7 +452,7 @@ class ImageArchive:
 			Number of images/batches in the database
 		"""
 		nbatches = int(self.nobjs/self.batch_size)
-		if (nbatches % self.nobjs > 0) and not(self.drop_last):
+		if (self.nobjs % self.batch_size > 0) and not(self.drop_last):
 			nbatches += 1
 		return nbatches
 
