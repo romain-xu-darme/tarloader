@@ -411,8 +411,6 @@ train_dataset = ImageArchive(
   data_in_memory = False,
   open_after_fork = True)
 
-worker_init_fn = train_dataset.worker_open_archive if open_after_fork else None
-
 train_loader = torch.utils.data.DataLoader(
   train_dataset, batch_size=64, shuffle=False,
   num_workers=10, worker_init_fn=train_dataset.worker_open_archive,
