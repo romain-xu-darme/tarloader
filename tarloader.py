@@ -514,7 +514,7 @@ class ImageArchive:
 		if not(self.afile):
 			self.afile = open(self.apath,'rb')
 
-def ImageArchive_add_parser_options(parser,use_existing_index=False):
+def ImageArchive_add_parser_options(parser):
 	""" Add all common arguments for the (basic) initialization of a
 	ImageArchive object
 	Args:
@@ -523,23 +523,22 @@ def ImageArchive_add_parser_options(parser,use_existing_index=False):
 	parser.add_argument('--tarloader-archive', type=str,required=True,
 		metavar=('<path_to_file>'),
 		help='Path to the TAR archive.')
-	parser.add_argument('--tarloader-index-file', type=str,required=use_existing_index,
+	parser.add_argument('--tarloader-index-file', type=str,required=False,
 		metavar=('<path_to_file>'),
 		help='Path to the Numpy file containing index.')
-	if not use_existing_index:
-		parser.add_argument('--tarloader-archive-root-directory', type=str,required=False,
-			default="images",
-			metavar=('<path_to_directory>'),
-			help='Path to root directory inside TAR archive.')
-		parser.add_argument('--tarloader-image-file', type=str, required=False,
-			metavar=('<path_to_file>'),
-			help='Path to list of images.')
-		parser.add_argument('--tarloader-index-file-overwrite', required=False,
-			action='store_true',
-			help='Overwrite index (if it exists)')
-		parser.add_argument('--tarloader-label-file', required=False,
-			metavar=('<path_to_file>'),
-			help='Path to label file.')
+	parser.add_argument('--tarloader-archive-root-directory', type=str,required=False,
+		default="images",
+		metavar=('<path_to_directory>'),
+		help='Path to root directory inside TAR archive.')
+	parser.add_argument('--tarloader-image-file', type=str, required=False,
+		metavar=('<path_to_file>'),
+		help='Path to list of images.')
+	parser.add_argument('--tarloader-index-file-overwrite', required=False,
+		action='store_true',
+		help='Overwrite index (if it exists)')
+	parser.add_argument('--tarloader-label-file', required=False,
+		metavar=('<path_to_file>'),
+		help='Path to label file.')
 	parser.add_argument('--tarloader-batch-size', type=int, required=False,
 		metavar=('<size>'),
 		default=1,
