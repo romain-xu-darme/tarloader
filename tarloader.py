@@ -489,12 +489,13 @@ class ImageArchive:
 		Args:
 			index (int): Index of the image/batch in the database
 		Returns:
-			Tuple (image,label) or Tuple(array(images),array(labels)) depending on batch size
+			Tuple (array(images),array(labels))
 		"""
 		if index < 0: index = index % self.__len__()
 		if index >= self.__len__(): raise StopIteration
 		if self.batch_size == 1:
-			return self.__getsingleitem(index)
+			x,y = self.__getsingleitem(index)
+			return np.expand_dims(x,axis=0), np.expand_dims(y,axis=0)
 		else:
 			batch_start = index*self.batch_size
 			batch_end   = min((index+1)*self.batch_size,self.nobjs)
