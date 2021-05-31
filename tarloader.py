@@ -5,6 +5,7 @@ from typing import Any, Callable, cast, Dict, List, Optional, Tuple, BinaryIO
 from pathlib import Path
 from PIL import Image
 from io import BytesIO
+from progress.bar import Bar
 
 ####################################################################################
 # BEGIN: Extracted from torchvision.datasets.ImageFolder
@@ -76,6 +77,7 @@ def sort_img (
 		lines = [l.decode('utf-8') for l in lines]
 
 	img_infos = []
+	bar = Bar(f'[ImageArchive] Sorting images using index',max=len(tar_infos),suffix='%(percent).1f%%')
 	for t in tar_infos:
 		idx = -1
 		for l in lines:
@@ -86,6 +88,8 @@ def sort_img (
 			img_infos.append(ImgInfo(t,idx))
 		else:
 			raise KeyError('Could not find index for image '+t.name)
+		bar.next()
+	bar.finish()
 	# Sort
 	img_infos.sort(key=lambda x: x.index, reverse=False)
 	return img_infos
