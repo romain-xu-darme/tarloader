@@ -1,6 +1,6 @@
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple, BinaryIO
 from tarloader import ImageArchive,ImageArchive_add_parser_options,pil_loader
-from keras.utils import Sequence
+from tensorflow.keras.utils import Sequence
 import numpy as np
 
 class KerasImageArchive (Sequence):
