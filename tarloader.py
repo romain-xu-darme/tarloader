@@ -6,6 +6,7 @@ from pathlib import Path
 from PIL import Image
 from io import BytesIO
 from progress.bar import Bar
+from threading import Lock
 
 ####################################################################################
 # BEGIN: Extracted from torchvision.datasets.ImageFolder
@@ -395,6 +396,7 @@ class ImageArchive:
 		self.batch_size       = batch_size
 		self.drop_last        = drop_last
 		self.loader           = loader
+		self.mutex            = Lock()
 		############################
 
 		if data_in_memory and open_after_fork :
@@ -505,10 +507,16 @@ class ImageArchive:
 			batch_end   = min((index+1)*self.batch_size,self.nobjs)
 			X = []
 			Y = []
+			# This lock can for instance ensure that no modification of a transform
+			# function can occur while generating a batch. This is mandatory when
+			# using the "on_train_batch_begin" keras callback (which is not thread
+			# safe) to change the image shape after each batch.
+			self.mutex.acquire()
 			for idx in range(batch_start,batch_end):
 				x,y = self.__getsingleitem(idx)
 				X.append(x)
 				Y.append(y)
+			self.mutex.release()
 			return np.array(X),np.array(Y)
 
 	def worker_open_archive (self,wid):
