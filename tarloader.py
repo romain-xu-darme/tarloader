@@ -526,7 +526,7 @@ class ImageArchive:
 		if not(self.afile):
 			self.afile = open(self.apath,'rb')
 
-def ImageArchive_add_parser_options(parser):
+def ImageArchive_add_parser_options(parser,init=False):
 	""" Add all common arguments for the (basic) initialization of a
 	ImageArchive object
 	Args:
@@ -551,16 +551,17 @@ def ImageArchive_add_parser_options(parser):
 	parser.add_argument('--tarloader-label-file', required=False,
 		metavar=('<path_to_file>'),
 		help='Path to label file.')
-	parser.add_argument('--tarloader-batch-size', type=int, required=False,
-		metavar=('<size>'),
-		default=1,
-		help='Batch size')
-	parser.add_argument('--tarloader-drop-last-batch', required=False,
-		action='store_true',
-		help='Drop last non complete batch (if any)')
-	parser.add_argument('--tarloader-keep-in-memory', required=False,
-		action='store_true',
-		help='Keep all dataset in memory')
-	parser.add_argument('--tarloader-enable-multiprocess', required=False,
-		action='store_true',
-		help='Enable multiprocess mode')
+	if init == False:
+		parser.add_argument('--tarloader-batch-size', type=int, required=False,
+			metavar=('<size>'),
+			default=1,
+			help='Batch size')
+		parser.add_argument('--tarloader-drop-last-batch', required=False,
+			action='store_true',
+			help='Drop last non complete batch (if any)')
+		parser.add_argument('--tarloader-keep-in-memory', required=False,
+			action='store_true',
+			help='Keep all dataset in memory')
+		parser.add_argument('--tarloader-enable-multiprocess', required=False,
+			action='store_true',
+			help='Enable multiprocess mode')
