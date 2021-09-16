@@ -442,7 +442,6 @@ class ImageArchive:
 				self.idx = build_index_from_directories(members,ipath)
 
 		else :
-			print(f'[{self.__class__.__name__}] Loading index file {ipath}')
 			self.idx = np.load(ipath,allow_pickle = True)
 
 		# Split dataset
