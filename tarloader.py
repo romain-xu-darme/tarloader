@@ -498,25 +498,21 @@ class ImageArchive:
         """
         if index < 0: index = index % self.__len__()
         if index >= self.__len__(): raise StopIteration
-        if self.batch_size == 1:
-            x,y = self.__getsingleitem(index)
-            return np.expand_dims(x,axis=0), np.expand_dims(y,axis=0)
-        else:
-            batch_start = index*self.batch_size
-            batch_end   = min((index+1)*self.batch_size,self.nobjs)
-            X = []
-            Y = []
-            # This lock can for instance ensure that no modification of a transform
-            # function can occur while generating a batch. This is mandatory when
-            # using the "on_train_batch_begin" keras callback (which is not thread
-            # safe) to change the image shape after each batch.
-            self.mutex.acquire()
-            for idx in range(batch_start,batch_end):
-                x,y = self.__getsingleitem(idx)
-                X.append(x)
-                Y.append(y)
-            self.mutex.release()
-            return np.array(X),np.array(Y)
+        batch_start = index*self.batch_size
+        batch_end   = min((index+1)*self.batch_size,self.nobjs)
+        X = []
+        Y = []
+        # This lock can for instance ensure that no modification of a transform
+        # function can occur while generating a batch. This is mandatory when
+        # using the "on_train_batch_begin" keras callback (which is not thread
+        # safe) to change the image shape after each batch.
+        self.mutex.acquire()
+        for idx in range(batch_start,batch_end):
+            x,y = self.__getsingleitem(idx)
+            X.append(x)
+            Y.append(y)
+        self.mutex.release()
+        return X,Y
 
     def worker_open_archive (self,wid):
         """

@@ -92,7 +92,8 @@ class KerasImageArchive (Sequence):
         Returns:
             Tuple (image,label) or Tuple(array(images),array(labels)) depending on batch size
         """
-        return self.dataset[index]
+        X,Y = self.dataset[index]
+        return np.array(X), np.array(Y)
 
     def worker_open_archive (self):
         """
