@@ -7,6 +7,11 @@ load the entire dataset in memory.
 
 It is compatible with the torchvision.datasets.ImageFolder class.
 
+## Install requirements
+```
+$ python3 -m pip install -r requirements.txt
+```
+
 ## Path to the TAR archive
 The main argument for creating an ImageArchive object is the path to the target
 TAR archive.
