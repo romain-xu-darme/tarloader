@@ -354,6 +354,7 @@ class ImageArchive:
         batch_size (int, optional): Size of each batch of data. If set to 1 (default), the
             generator returns individual items of the dataset
         drop_last (bool, optional): Drop last non complete batch (if any)
+        shuffle (bool, optional): Shuffle dataset
         loader (callable, optional): A function to load an image given its path.
         is_valid_file (callable, optional): A function that takes path of an Image file
             and check if the file is a valid file (used to check of corrupt files)
@@ -379,6 +380,7 @@ class ImageArchive:
             target_transform: Optional[Callable] = None,
             batch_size: Optional[int] = 1,
             drop_last: Optional[bool] = False,
+            shuffle: Optional[bool] = False,
             loader: Callable[[BinaryIO], Any] = pil_loader,
             is_valid_file: Optional[Callable[[str], bool]] = None,
             data_in_memory: Optional[bool] = False,
@@ -447,6 +449,10 @@ class ImageArchive:
         # Split dataset
         if split_mask is not None:
             self.idx = self.idx[split_mask==split_val]
+
+        # Shuffle dataset
+        if shuffle:
+            np.random.shuffle(self.idx)
 
         self.nobjs = self.idx.shape[0]
 
@@ -555,6 +561,9 @@ def ImageArchive_add_parser_options(parser,init=False):
         parser.add_argument('--tarloader-drop-last-batch', required=False,
             action='store_true',
             help='Drop last non complete batch (if any)')
+        parser.add_argument('--tarloader-shuffle', required=False,
+            action='store_true',
+            help='Shuffle dataset.')
         parser.add_argument('--tarloader-keep-in-memory', required=False,
             action='store_true',
             help='Keep all dataset in memory')

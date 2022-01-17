@@ -179,7 +179,8 @@ dataset = ImageArchive(
 )
 ```
 
-## Splitting datasets
+## Loading datasets
+### Split
 In order to split the dataset between several subsets, it is possible to specify a
 splitting mask associating each index of the image with a value which is compared
 to a reference value, as shown below.
@@ -204,6 +205,24 @@ test_dataset = tarloader.ImageArchive(
   split_val  = 0,
   image_index='images.txt',
   image_label='image_class_labels.txt'
+)
+```
+### Shuffling
+Provided that the Numpy random seed is set prior to loading, it is possible to
+deterministically shuffle the dataset.
+```
+# The same random seed will always lead to the same permutation of elements in
+# the dataset
+np.random.seed(0)
+
+train_dataset = tarloader.ImageArchive(
+  apath=apath,
+  root=root,
+  split_mask = split_mask,
+  split_val  = 1,
+  image_index='images.txt',
+  image_label='image_class_labels.txt',
+  shuffle = True,
 )
 ```
 
