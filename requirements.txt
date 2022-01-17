@@ -1,4 +1,4 @@
 torch >= 1.09
 tensorflow >= 2.4.1
 numpy >= 1.19.5
-pillow == 7.0.0
+pillow == 9.0.0
