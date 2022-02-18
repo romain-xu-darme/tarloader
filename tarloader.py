@@ -138,6 +138,9 @@ def get_img_from_tar(
     if root:
         members = [m for m in members
             if os.path.dirname(m.name).startswith(root)]
+        if len(members) == 0:
+            raise ValueError(f'Could not find files in archive starting with {root}. '\
+                f'Examples of file paths {[m.name for m in tar.getmembers()[:5]]}')
         # Add trailing '/' to root path (if necessary)
         if root[-1] != '/': root += '/'
         # Remove prefix from members' names
