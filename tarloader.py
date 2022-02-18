@@ -76,14 +76,14 @@ def sort_img (
     if decode :
         # Decode index file
         lines = [l.decode('utf-8') for l in lines]
-
     img_infos = []
     bar = Bar(f'[ImageArchive] Sorting images using index',max=len(tar_infos),suffix='%(percent).1f%%')
     for t in tar_infos:
         idx = -1
-        for l in lines:
+        for i,l in enumerate(lines):
             if t.name == l.split()[1]:
                 idx = int(l.split()[0])
+                lines.pop(i)
                 break
         if idx >= 0:
             img_infos.append(ImgInfo(t,idx))
