@@ -2,6 +2,7 @@ import os
 import tarfile
 import numpy as np
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple, BinaryIO
+from bisect import bisect_left
 from pathlib import Path
 from PIL import Image
 from io import BytesIO
@@ -76,19 +77,22 @@ def sort_img (
     if decode :
         # Decode index file
         lines = [l.decode('utf-8') for l in lines]
+
     img_infos = []
     bar = Bar(f'[ImageArchive] Sorting images using index',max=len(tar_infos),suffix='%(percent).1f%%')
+    # Sort lines wrt entry names
+    lines.sort(key = lambda l: l.split()[1], reverse=False)
+    # Split entry names and index for binary search
+    eindex = [int(l.split()[0]) for l in lines]
+    enames = [l.split()[1] for l in lines]
+
     for t in tar_infos:
-        idx = -1
-        for i,l in enumerate(lines):
-            if t.name == l.split()[1]:
-                idx = int(l.split()[0])
-                lines.pop(i)
-                break
-        if idx >= 0:
-            img_infos.append(ImgInfo(t,idx))
-        else:
+        i = bisect_left(enames,t.name)
+        if i == len(enames):
             raise KeyError('Could not find index for image '+t.name)
+        img_infos.append(ImgInfo(t,eindex[i]))
+        eindex.pop(i)
+        enames.pop(i)
         bar.next()
     bar.finish()
     # Sort
