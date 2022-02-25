@@ -525,6 +525,8 @@ class ImageArchive:
             X.append(x)
             Y.append(y)
         self.mutex.release()
+        # Return single elements for batch_size = 1
+        if self.batch_size == 1: return X[0],Y[0]
         return X,Y
 
     def worker_open_archive (self,wid):
