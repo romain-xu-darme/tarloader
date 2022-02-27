@@ -543,25 +543,26 @@ def ImageArchive_add_parser_options(parser,init=False):
     Args:
         parser: argparse argument parser
     """
-    parser.add_argument('--tarloader-archive', type=str,required=True,
+    parser.add_argument('--tarloader-archive', type=str,required=True,nargs='+',
         metavar=('<path_to_file>'),
-        help='Path to the TAR archive.')
-    parser.add_argument('--tarloader-index-file', type=str,required=False,
+        help='Path to the TAR archive(s).')
+    parser.add_argument('--tarloader-index-file', type=str,required=False,nargs='+',
         metavar=('<path_to_file>'),
-        help='Path to the Numpy file containing index.')
-    parser.add_argument('--tarloader-archive-root-directory', type=str,required=False,
-        default="images",
-        metavar=('<path_to_directory>'),
-        help='Path to root directory inside TAR archive.')
-    parser.add_argument('--tarloader-image-file', type=str, required=False,
-        metavar=('<path_to_file>'),
-        help='Path to list of images.')
-    parser.add_argument('--tarloader-index-file-overwrite', required=False,
-        action='store_true',
-        help='Overwrite index (if it exists)')
-    parser.add_argument('--tarloader-label-file', required=False,
-        metavar=('<path_to_file>'),
-        help='Path to label file.')
+        help='Path to the Numpy file(s) containing index.')
+    if init:
+        parser.add_argument('--tarloader-archive-root-directory', type=str,required=False,
+            default="images",
+            metavar=('<path_to_directory>'),
+            help='Path to root directory inside TAR archive.')
+        parser.add_argument('--tarloader-image-file', type=str, required=False,
+            metavar=('<path_to_file>'),
+            help='Path to list of images.')
+        parser.add_argument('--tarloader-index-file-overwrite', required=False,
+            action='store_true',
+            help='Overwrite index (if it exists)')
+        parser.add_argument('--tarloader-label-file', required=False,
+            metavar=('<path_to_file>'),
+            help='Path to label file.')
     if init == False:
         parser.add_argument('--tarloader-batch-size', type=int, required=False,
             metavar=('<size>'),

@@ -35,7 +35,7 @@ def add_textbox (
 
 # Parse command line
 ap = argparse.ArgumentParser(
-    description='Visualize TARLOADER archive content.',
+    description='Visualize TARLOADER archive(s) content.',
     formatter_class=RawTextHelpFormatter)
 ap.add_argument('--image-shape', type=int, required=False,
     nargs=2, metavar=('<width>','<height>'), default=[224,224],
@@ -44,30 +44,49 @@ ap.add_argument('--image-shape', type=int, required=False,
 ImageArchive_add_parser_options(ap)
 args = ap.parse_args()
 
-dataset = ImageArchive (
-    apath = args.tarloader_archive,
-    ipath = args.tarloader_index_file,
-    root = args.tarloader_archive_root_directory,
-    image_index = args.tarloader_image_file,
+if len(args.tarloader_archive) not in [1, len(args.tarloader_index_file)]:
+    ap.error('Mismatching number of TAR archives and index files.')
+if len(args.tarloader_archive) == 1:
+    # Broadcast archive file
+    args.tarloader_archive = [args.tarloader_archive[0]
+            for _ in range(len(args.tarloader_index_file))]
+
+datasets = [ImageArchive (
+    apath = archive,
+    ipath = index,
     batch_size = args.tarloader_batch_size,
     drop_last = args.tarloader_drop_last_batch,
     shuffle = args.tarloader_shuffle,
-    overwrite_index = args.tarloader_index_file_overwrite,
     data_in_memory = args.tarloader_keep_in_memory,
     open_after_fork = args.tarloader_enable_multiprocess
-)
+) for archive, index in zip(args.tarloader_archive,args.tarloader_index_file)]
 
-ncols = int(sqrt(args.tarloader_batch_size))
-nrows = int(ceil(args.tarloader_batch_size/ncols))
+ncols = args.tarloader_batch_size
+nrows = len(datasets)
 
-def img_generator():
+# Image generator for each dataset
+def dataset_img_generator(dataset):
     for imgs, labels in dataset:
         res = [img.resize(args.image_shape) for img in imgs]
         res = [add_textbox(img,f'Class {label[0]}') for img,label in zip(res,labels)]
         yield res
 
+# Aggregator
+def aggregator ():
+    generators = [dataset_img_generator(d) for d in datasets]
+    end = False
+    while not(end):
+        imgs = []
+        for g in generators:
+            try :
+                imgs += next(g)
+            except StopIteration:
+                end = True
+        if end: raise StopIteration()
+        yield imgs
+
 visualizer = ImageVisualizer(
-    img_generator(),
+    aggregator(),
     nrows = nrows,
     ncols = ncols,
     wscreen = 1500,

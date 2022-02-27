@@ -9,6 +9,11 @@ ap = argparse.ArgumentParser(
 ImageArchive_add_parser_options(ap,init=True)
 args = ap.parse_args()
 
+if len(args.tarloader_archive) > 1 or len(args.tarloader_index_file) > 1:
+    ap.error('Only one archive allowed during building of index.')
+args.tarloader_archive = args.tarloader_archive[0]
+args.tarloader_index_file = args.tarloader_index_file[0]
+
 archive = ImageArchive(
 	apath = args.tarloader_archive,
 	ipath = args.tarloader_index_file,
