@@ -81,23 +81,22 @@ def sort_img (
 
     img_infos = []
     bar = Bar(f'[ImageArchive] Sorting images using index',max=len(tar_infos),suffix='%(percent).1f%%')
-    # Sort lines wrt entry names
-    lines.sort(key = lambda l: l.split()[1], reverse=False)
-    # Split entry names and index for binary search
-    eindex = [int(l.split()[0]) for l in lines]
-    enames = [l.split()[1] for l in lines]
-
-    for t in tar_infos:
-        i = bisect_left(enames,t.name)
-        if i == len(enames):
-            raise KeyError('Could not find index for image '+t.name)
-        img_infos.append(ImgInfo(t,eindex[i]))
-        eindex.pop(i)
-        enames.pop(i)
+    # Sort lines wrt index
+    lines.sort(key = lambda l: int(l.split()[0]), reverse=False)
+    # Sort tarinfos wrt to file path
+    tar_infos.sort(key = lambda t: t.name, reverse=False)
+    # Extract entry names for binary search
+    tar_names = [t.name for t in tar_infos]
+    for l in lines:
+        index, path = int(l.split()[0]), l.split()[1]
+        i = bisect_left(tar_names,path)
+        if i == len(tar_names):
+            raise KeyError('Could not find index for image '+path)
+        img_infos.append(ImgInfo(tar_infos[i],index))
+        tar_names.pop(i)
+        tar_infos.pop(i)
         bar.next()
     bar.finish()
-    # Sort
-    img_infos.sort(key=lambda x: x.index, reverse=False)
     return img_infos
 
 def get_img_from_tar(
