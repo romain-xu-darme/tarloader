@@ -8,6 +8,7 @@ from PIL import Image
 from io import BytesIO
 from progress.bar import Bar
 from threading import Lock
+import copy
 
 ####################################################################################
 # BEGIN: Extracted from torchvision.datasets.ImageFolder
@@ -136,7 +137,7 @@ def get_img_from_tar(
 
     # Open TAR file with transparent compression
     tar = tarfile.open(path,mode='r')
-    members = tar.getmembers()
+    members = copy.deepcopy(tar.getmembers())
 
     # Select files in root directory
     if root:
